@@ -1,0 +1,52 @@
+name: Rollback Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: 'Service to rollback'
+        required: true
+        type: choice
+        options:
+        - api-service
+        - worker-service
+        - frontend-service
+        - all
+      revision:
+        description: 'Revision number to rollback to (leave empty for previous)'
+        required: false
+        type: string
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'latest'
+    
+    - name: Rollback deployment
+      run: |
+        if [ "${{ github.event.inputs.service }}" = "all" ]; then
+          services=("api-service" "worker-service" "frontend-service")
+        else
+          services=("${{ github.event.inputs.service }}")
+        fi
+        
+        for service in "${services[@]}"; do
+          if [ -n "${{ github.event.inputs.revision }}" ]; then
+            kubectl rollout undo deployment/$service -n microservices --to-revision=${{ github.event.inputs.revision }}
+          else
+            kubectl rollout undo deployment/$service -n microservices
+          fi
+          
+          kubectl rollout status deployment/$service -n microservices --timeout=300s
+        done
+    
+    - name: Verify rollback
+      run: |
+        kubectl get deployments -n microservices
+        kubectl get pods -n microservices
