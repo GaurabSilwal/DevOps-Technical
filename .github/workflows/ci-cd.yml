@@ -20,8 +20,6 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: api-service/package-lock.json
     
     - name: Setup Python
       uses: actions/setup-python@v4
@@ -31,7 +29,12 @@ jobs:
     - name: Install API dependencies
       run: |
         cd api-service
-        npm ci
+        npm install
+    
+    - name: Install Frontend dependencies
+      run: |
+        cd frontend-service
+        npm install
     
     - name: Install Worker dependencies
       run: |
@@ -42,6 +45,11 @@ jobs:
       run: |
         cd api-service
         npm test
+    
+    - name: Run Frontend tests
+      run: |
+        cd frontend-service
+        npm test -- --coverage --watchAll=false
     
     - name: Run Worker tests
       run: |
