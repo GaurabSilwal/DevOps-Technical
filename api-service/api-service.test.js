@@ -1,4 +1,12 @@
 const request = require('supertest');
+
+// Mock the database pool
+jest.mock('pg', () => ({
+  Pool: jest.fn(() => ({
+    query: jest.fn().mockResolvedValue({ rows: [] })
+  }))
+}));
+
 const app = require('./server');
 
 describe('API Service', () => {
@@ -14,8 +22,13 @@ describe('API Service', () => {
   test('GET /api/users should return users array', async () => {
     const response = await request(app)
       .get('/api/users')
+      .expect(200)
       .expect('Content-Type', /json/);
     
-    expect(Array.isArray(response.body) || response.body.error).toBeTruthy();
+    expect(response.body.users).toEqual([]);
+  });
+
+  afterAll((done) => {
+    done();
   });
 });
