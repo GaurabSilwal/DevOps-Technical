@@ -3,7 +3,12 @@ const request = require('supertest');
 // Mock the database pool
 jest.mock('pg', () => ({
   Pool: jest.fn(() => ({
-    query: jest.fn().mockResolvedValue({ rows: [] })
+    query: jest.fn((sql) => {
+      if (sql.includes('COUNT')) {
+        return Promise.resolve({ rows: [{ count: '0' }] });
+      }
+      return Promise.resolve({ rows: [] });
+    })
   }))
 }));
 
@@ -26,6 +31,7 @@ describe('API Service', () => {
       .expect('Content-Type', /json/);
     
     expect(response.body.users).toEqual([]);
+    expect(response.body.pagination).toBeDefined();
   });
 
   afterAll((done) => {
