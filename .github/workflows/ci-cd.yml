@@ -60,6 +60,9 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
     strategy:
       matrix:
         service: [api-service, worker-service, frontend-service]
@@ -81,10 +84,10 @@ jobs:
       id: meta
       uses: docker/metadata-action@v5
       with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}
+        images: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.service }}
         tags: |
           type=ref,event=branch
-          type=sha,prefix={{branch}}-
+          type=sha
           type=raw,value=latest,enable={{is_default_branch}}
     
     - name: Build and push Docker image
@@ -114,14 +117,11 @@ jobs:
     - name: Deploy to Kubernetes
       run: |
         # Update image tags in manifests
-        sed -i "s|api-service:latest|${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/api-service:${{ github.sha }}|g" k8s/api-service.yaml
-        sed -i "s|worker-service:latest|${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/worker-service:${{ github.sha }}|g" k8s/worker-service.yaml
-        sed -i "s|frontend-service:latest|${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend-service:${{ github.sha }}|g" k8s/frontend-service.yaml
+        sed -i "s|api-service:latest|${{ env.REGISTRY }}/${{ github.repository }}/api-service:${{ github.sha }}|g" k8s/api-service.yaml
+        sed -i "s|worker-service:latest|${{ env.REGISTRY }}/${{ github.repository }}/worker-service:${{ github.sha }}|g" k8s/worker-service.yaml
+        sed -i "s|frontend-service:latest|${{ env.REGISTRY }}/${{ github.repository }}/frontend-service:${{ github.sha }}|g" k8s/frontend-service.yaml
         
-        # Apply manifests
         kubectl apply -f k8s/
-        
-        # Wait for rollout
         kubectl rollout status deployment/api-service -n microservices --timeout=300s
         kubectl rollout status deployment/worker-service -n microservices --timeout=300s
         kubectl rollout status deployment/frontend-service -n microservices --timeout=300s
