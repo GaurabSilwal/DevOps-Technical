@@ -1,0 +1,251 @@
+MICROSERVICES VERIFICATION GUIDE
+================================
+
+This document provides step-by-step verification procedures for all microservices components.
+
+DEPLOYMENT VERIFICATION
+======================
+
+Docker Compose Deployment:
+--------------------------
+# Deploy services
+make docker-up
+
+# Check all services status
+docker compose ps
+
+# Should show all services as "Up"
+
+Kubernetes Deployment:
+----------------------
+# Deploy to Kubernetes
+make k8s-up
+
+# Check namespace exists
+kubectl get namespaces
+
+# Check all pods are running
+kubectl get pods -n microservices
+
+# Check services
+kubectl get services -n microservices
+
+COMPONENT VERIFICATION
+=====================
+
+1. API SERVICE (Node.js REST API + Database)
+--------------------------------------------
+
+Health Check:
+# Docker Compose
+curl http://localhost:3000/health
+
+# Kubernetes
+kubectl port-forward service/api-service 3000:80 -n microservices
+curl http://localhost:3000/health
+
+API Endpoints:
+# Get users list
+curl http://localhost:3000/api/users
+
+# Create a new user
+curl -X POST http://localhost:3000/api/users \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Test User","email":"test@example.com"}'
+
+# Verify user was created
+curl http://localhost:3000/api/users
+
+Check API Logs:
+# Docker Compose
+docker compose logs api-service
+
+# Kubernetes
+kubectl logs deployment/api-service -n microservices
+
+Database Connection Verification:
+# Should see successful database queries in API logs
+# Look for: "API service running on port 3000"
+# Look for: Database query logs without errors
+
+2. WORKER SERVICE (Python Background Jobs + Queue + DB)
+-------------------------------------------------------
+
+Check Worker Status:
+# Docker Compose
+docker compose logs worker-service
+
+# Kubernetes
+kubectl logs deployment/worker-service -n microservices
+
+# Should see Celery worker startup messages like:
+# "celery@hostname ready"
+# "Connected to redis://redis:6379/0"
+
+Verify Redis Connection:
+# Docker Compose
+docker exec -it $(docker compose ps -q redis) redis-cli ping
+
+# Kubernetes
+kubectl exec -it deployment/redis -n microservices -- redis-cli ping
+
+# Should return: PONG
+
+Check Worker Processing:
+# Worker logs should show:
+# - Celery worker initialization
+# - Redis connection established
+# - Ready to process tasks
+
+3. FRONTEND SERVICE (React + Nginx)
+-----------------------------------
+
+Access Frontend:
+# Docker Compose
+curl http://localhost
+
+# Kubernetes
+curl http://localhost:30080
+
+# Should return HTML content
+
+Browser Verification:
+# Docker Compose
+Open: http://localhost
+
+# Kubernetes
+Open: http://localhost:30080
+
+# Should display:
+# - React application loads
+# - User list is visible
+# - Add user form is functional
+
+Check Frontend Logs:
+# Docker Compose
+docker compose logs frontend-service
+
+# Kubernetes
+kubectl logs deployment/frontend-service -n microservices
+
+# Should show Nginx access logs
+
+4. DATABASE (PostgreSQL Shared Storage)
+---------------------------------------
+
+Database Connection:
+# Docker Compose
+docker exec -it $(docker compose ps -q postgres) psql -U postgres -d microservices_db
+
+# Kubernetes
+kubectl exec -it deployment/postgres -n microservices -- psql -U postgres -d microservices_db
+
+Database Verification:
+# Inside PostgreSQL shell:
+\dt                    # List tables
+SELECT * FROM users;   # Check users data
+\q                     # Exit
+
+Check Database Logs:
+# Docker Compose
+docker compose logs postgres
+
+# Kubernetes
+kubectl logs deployment/postgres -n microservices
+
+# Should show successful connections from API service
+
+Redis Cache Verification:
+# Docker Compose
+docker exec -it $(docker compose ps -q redis) redis-cli
+
+# Kubernetes
+kubectl exec -it deployment/redis -n microservices -- redis-cli
+
+# Inside Redis shell:
+ping              # Should return PONG
+keys *            # List all keys
+exit              # Exit Redis shell
+
+COMPLETE SYSTEM VERIFICATION
+============================
+
+End-to-End Test Procedure:
+1. Access frontend in browser
+2. Verify user list loads (tests API → Database)
+3. Add a new user via the form
+4. Verify user appears in the list immediately
+5. Check database contains the new user
+6. Verify API logs show the POST request
+7. Confirm worker service is running (ready for background jobs)
+
+Network Connectivity Test:
+# Test API from frontend container
+# Docker Compose
+docker exec -it $(docker compose ps -q frontend-service) wget -qO- http://api-service:3000/health
+
+# Kubernetes
+kubectl exec -it deployment/frontend-service -n microservices -- wget -qO- http://api-service/health
+
+Service Discovery Test:
+# Test database connection from API
+# Check API logs for successful database queries
+# Look for: "Database connection established"
+
+TROUBLESHOOTING VERIFICATION
+============================
+
+Common Issues and Checks:
+
+1. CORS Errors:
+   - Check browser console for CORS errors
+   - Verify API service CORS configuration
+   - Ensure frontend can reach API service
+
+2. Database Connection Issues:
+   - Check PostgreSQL is running and accepting connections
+   - Verify environment variables in API service
+   - Check database initialization logs
+
+3. Service Discovery Issues:
+   - Verify service names match in configuration
+   - Check network connectivity between services
+   - Ensure services are in same network/namespace
+
+4. Port Binding Issues:
+   - Check no port conflicts exist
+   - Verify correct port mappings
+   - Ensure services are listening on correct interfaces
+
+Health Check Summary:
+# All services should respond to health checks
+curl http://localhost:3000/health          # API service
+curl http://localhost/health               # Frontend service (Docker)
+curl http://localhost:30080/health         # Frontend service (K8s)
+
+# Database and Redis should accept connections
+# Worker service should show "ready" status in logs
+
+PERFORMANCE VERIFICATION
+========================
+
+Load Testing (Optional):
+# Test API performance
+for i in {1..10}; do curl http://localhost:3000/api/users; done
+
+# Monitor resource usage
+# Docker Compose
+docker stats
+
+# Kubernetes
+kubectl top pods -n microservices
+
+Scaling Verification (Kubernetes only):
+# Check HPA status
+kubectl get hpa -n microservices
+
+# Trigger scaling by generating load
+# Monitor pod scaling
+kubectl get pods -n microservices -w
+
+This verification guide ensures all microservices components are properly deployed and functioning correctly.

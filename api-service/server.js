@@ -31,7 +31,7 @@ app.use(helmet({
   },
 }));
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3001',
+  origin: [process.env.FRONTEND_URL || 'http://localhost', 'http://localhost:3001', 'http://localhost:80', 'http://192.168.49.2:30080'],
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));

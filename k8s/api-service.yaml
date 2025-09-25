@@ -33,7 +33,7 @@ spec:
       containers:
       - name: api-service
         image: api-service:latest
-        imagePullPolicy: Always
+        imagePullPolicy: Never
         ports:
         - containerPort: 3000
           name: http

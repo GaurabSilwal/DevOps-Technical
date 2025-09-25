@@ -10,6 +10,8 @@ RUN npm ci --silent --only=production && npm cache clean --force
 
 # Copy source and build
 COPY . .
+ARG REACT_APP_API_URL=http://api-service
+ENV REACT_APP_API_URL=$REACT_APP_API_URL
 RUN npm run build
 
 # Production stage

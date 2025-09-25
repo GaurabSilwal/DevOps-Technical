@@ -23,12 +23,10 @@ print_error() {
 
 # Detect OS
 detect_os() {
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        OS="macos"
-    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         OS="linux"
     else
-        print_error "Unsupported OS: $OSTYPE"
+        print_error "Unsupported OS: $OSTYPE. Only Linux is supported."
         exit 1
     fi
     print_status "Detected OS: $OS"
@@ -43,19 +41,10 @@ install_docker() {
     
     print_status "Installing Docker..."
     
-    if [ "$OS" = "macos" ]; then
-        if command -v brew >/dev/null 2>&1; then
-            brew install --cask docker
-        else
-            print_error "Please install Docker Desktop manually from https://docker.com/products/docker-desktop"
-            return 1
-        fi
-    elif [ "$OS" = "linux" ]; then
-        curl -fsSL https://get.docker.com -o get-docker.sh
-        sudo sh get-docker.sh
-        sudo usermod -aG docker $USER
-        rm get-docker.sh
-    fi
+    curl -fsSL https://get.docker.com -o get-docker.sh
+    sudo sh get-docker.sh
+    sudo usermod -aG docker $USER
+    rm get-docker.sh
     
     print_success "Docker installed"
 }
@@ -69,19 +58,9 @@ install_kubectl() {
     
     print_status "Installing kubectl..."
     
-    if [ "$OS" = "macos" ]; then
-        if command -v brew >/dev/null 2>&1; then
-            brew install kubectl
-        else
-            curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/darwin/amd64/kubectl"
-            chmod +x kubectl
-            sudo mv kubectl /usr/local/bin/
-        fi
-    elif [ "$OS" = "linux" ]; then
-        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-        chmod +x kubectl
-        sudo mv kubectl /usr/local/bin/
-    fi
+    curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+    chmod +x kubectl
+    sudo mv kubectl /usr/local/bin/
     
     print_success "kubectl installed"
 }
@@ -116,17 +95,8 @@ install_nodejs() {
     
     print_status "Installing Node.js..."
     
-    if [ "$OS" = "macos" ]; then
-        if command -v brew >/dev/null 2>&1; then
-            brew install node@18
-        else
-            print_error "Please install Node.js manually from https://nodejs.org"
-            return 1
-        fi
-    elif [ "$OS" = "linux" ]; then
-        curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-        sudo apt-get install -y nodejs
-    fi
+    curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+    sudo apt-get install -y nodejs
     
     print_success "Node.js installed"
 }
@@ -143,17 +113,8 @@ install_python() {
     
     print_status "Installing Python 3.11..."
     
-    if [ "$OS" = "macos" ]; then
-        if command -v brew >/dev/null 2>&1; then
-            brew install python@3.11
-        else
-            print_error "Please install Python manually from https://python.org"
-            return 1
-        fi
-    elif [ "$OS" = "linux" ]; then
-        sudo apt-get update
-        sudo apt-get install -y python3.11 python3.11-pip
-    fi
+    sudo apt-get update
+    sudo apt-get install -y python3.11 python3.11-pip
     
     print_success "Python installed"
 }
@@ -167,12 +128,8 @@ install_make() {
     
     print_status "Installing Make..."
     
-    if [ "$OS" = "macos" ]; then
-        xcode-select --install 2>/dev/null || true
-    elif [ "$OS" = "linux" ]; then
-        sudo apt-get update
-        sudo apt-get install -y build-essential
-    fi
+    sudo apt-get update
+    sudo apt-get install -y build-essential
     
     print_success "Make installed"
 }
@@ -200,13 +157,14 @@ main() {
     echo
     print_status "Next steps:"
     echo "  1. Restart your terminal (or run 'source ~/.bashrc')"
-    echo "  2. Start Docker Desktop (if on macOS)"
-    echo "  3. Run './scripts/deploy-all.sh' to deploy the application"
+    echo "  2. Start Docker service"
+    echo "  3. Setup local Kubernetes (minikube or kind)"
+    echo "  4. Run './scripts/deploy-all.sh' to deploy the application"
     echo
     print_status "Verify installation:"
     echo "  docker --version"
     echo "  kubectl version --client"
-    echo "  kind version"
+
     echo "  node --version"
     echo "  python3 --version"
 }

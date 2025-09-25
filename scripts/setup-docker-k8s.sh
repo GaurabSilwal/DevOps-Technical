@@ -10,23 +10,16 @@ if ! docker info >/dev/null 2>&1; then
     exit 1
 fi
 
-# Check if any Kubernetes context is available
-if ! kubectl config get-contexts >/dev/null 2>&1; then
-    echo "Error: No Kubernetes context found."
-    echo "Please setup a Kubernetes cluster (minikube, kind, or Docker Desktop)"
+# Check if minikube context is available
+if ! kubectl config get-contexts | grep -q "minikube"; then
+    echo "Error: Minikube context not found."
+    echo "Please setup minikube cluster first: minikube start"
     exit 1
 fi
 
-# Use current context or try common ones
-if kubectl config get-contexts | grep -q "docker-desktop"; then
-    kubectl config use-context docker-desktop
-    echo "Using Docker Desktop Kubernetes"
-elif kubectl config get-contexts | grep -q "minikube"; then
-    kubectl config use-context minikube
-    echo "Using Minikube"
-else
-    echo "Using current Kubernetes context: $(kubectl config current-context)"
-fi
+# Use minikube context
+kubectl config use-context minikube
+echo "Using Minikube"
 
 # Wait for cluster to be ready
 kubectl wait --for=condition=Ready nodes --all --timeout=60s
