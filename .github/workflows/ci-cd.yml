@@ -114,14 +114,10 @@ jobs:
       with:
         version: 'latest'
     
-    - name: Deploy to Kubernetes
+    - name: Update manifests
       run: |
         # Update image tags in manifests
         sed -i "s|api-service:latest|${{ env.REGISTRY }}/${{ github.repository }}/api-service:${{ github.sha }}|g" k8s/api-service.yaml
         sed -i "s|worker-service:latest|${{ env.REGISTRY }}/${{ github.repository }}/worker-service:${{ github.sha }}|g" k8s/worker-service.yaml
         sed -i "s|frontend-service:latest|${{ env.REGISTRY }}/${{ github.repository }}/frontend-service:${{ github.sha }}|g" k8s/frontend-service.yaml
-        
-        kubectl apply -f k8s/
-        kubectl rollout status deployment/api-service -n microservices --timeout=300s
-        kubectl rollout status deployment/worker-service -n microservices --timeout=300s
-        kubectl rollout status deployment/frontend-service -n microservices --timeout=300s
+        echo "Manifests updated with new image tags"
